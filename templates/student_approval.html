@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>New Student Approval</title>
+</head>
+<body>
+  <h2>New Student Request</h2>
+  <p><strong>ID:</strong> {{ student.student_id }}</p>
+  <p><strong>Name:</strong> {{ student.name }}</p>
+  <p><strong>Email:</strong> {{ student.email }}</p>
+  <p><strong>Phone:</strong> {{ student.phone }}</p>
+
+  <p>Do you want to add this student?</p>
+  <a href="{{ approve_url }}" style="padding:10px;background:green;color:white;text-decoration:none;">✅ Approve</a>
+  <a href="{{ reject_url }}" style="padding:10px;background:red;color:white;text-decoration:none;">❌ Reject</a>
+</body>
+</html>

@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Choose Payment Method</title>
+</head>
+<body>
+    <h2>Dear {{ student.name }}, 🎉</h2>
+    <p>Please choose your payment method:</p>
+
+    <a href="{% url 'initiate-payment' student.student_id %}" 
+       style="display:inline-block;padding:10px 15px;background:#4CAF50;color:#fff;text-decoration:none;border-radius:5px;">
+       Pay with PayU 💳
+    </a>
+
+
+    <form method="post" action="{% url 'option-payment-webhook' %}" style="margin-top:20px;">
+        {% csrf_token %}
+        <input type="hidden" name="student_id" value="{{ student.student_id }}">
+        <button name="status" value="success" 
+                 style="display:inline-block;padding:10px 15px;background:#4c7faf;color:#fff;text-decoration:none;border-radius:5px;">
+            Pay With Cloud 💳
+        </button>
+    </form>
+</body>
+</html>

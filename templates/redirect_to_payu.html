@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+{% load static %}
+<html>
+<head>
+    <title>Redirecting to Secure Payment Gateway...</title>
+    <link rel="stylesheet" href="{% static 'css/redirectform.css'  %}">
+</head>
+<body>
+    <center>
+    <div class="container">
+        <h2>Secure Payment Gateway</h2>
+         <p>Confirm the details below before proceeding:</p>
+
+        <div class="student-info">
+            <p><strong>Student ID:</strong> {{ student.student_id }}</p>
+            <p><strong>Name:</strong> {{ student.name }}</p>
+            <p><strong>Email:</strong> {{ student.email }}</p>
+            <p><strong>Phone:</strong> {{ student.phone }}</p> 
+        </div>
+        
+        <p>Click the button below to proceed to the secure payment page.</p>
+        
+        <form action="{{ payu_url }}" method="post" name="payuForm">
+            {% for key, value in data.items %}
+                <input type="hidden" name="{{ key }}" value="{{ value }}"/>
+            {% endfor %}
+            <input type="submit" class="submit-btn" value="Proceed to Pay">
+        </form>
+    </div>
+    </center>
+</body>
+</html>

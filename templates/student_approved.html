@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Registration Approved</title>
+</head>
+<body>
+    <h2>Dear {{ student.name }}, 🎉</h2>
+    <p>
+        Congratulations! Your registration has been approved by the staff.
+    </p>
+    <p>
+        To complete your registration, please proceed with payment using the button below:
+    </p>
+    <p>
+        <a href="{{ payment_url }}" 
+           style="display:inline-block;padding:10px 15px;background:#4CAF50;color:#fff;text-decoration:none;border-radius:5px;">
+           Pay Now 💳
+        </a>
+    </p>
+    <p>
+        Best regards,<br>   
+        <strong>Student Portal Team</strong>
+    </p>
+</body>
+</html>

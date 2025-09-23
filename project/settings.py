@@ -140,8 +140,8 @@ EMAIL_HOST_USER = "vinothg1628@gmail.com"
 EMAIL_HOST_PASSWORD = "ohuhupaupivzjozr"
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
-SITE_URL = 'https://82aeccb0553c.ngrok-free.app'
+SITE_URL = 'https://e7543d8fae26.ngrok-free.app'
 
 CSRF_TRUSTED_ORIGINS = [
-    "https://82aeccb0553c.ngrok-free.app",
+    "https://e7543d8fae26.ngrok-free.app",
 ] 

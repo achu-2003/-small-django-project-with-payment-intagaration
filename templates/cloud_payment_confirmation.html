@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Confirm Payment</title>
+</head>
+<body>
+    <center>
+        <h2>Hi {{ payment.student.name }} 🎉</h2>
+        <p>Your payment of ₹{{ payment.amount }} is in <strong>{{ payment.status }}</strong> status.</p>
+        <form method="post" action="{% url 'confirm-cloud-payment' payment.id %}">
+            {% csrf_token %}
+            <button type="submit" style="padding:10px 15px; background:#4CAF50; color:white; border-radius:5px;">
+                Confirm Payment ✅
+            </button>
+        </form>
+    </center>
+</body>
+</html>

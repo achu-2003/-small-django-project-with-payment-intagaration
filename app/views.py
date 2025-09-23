@@ -298,63 +298,62 @@ def choose_gateway(request, student_id):
     student = get_object_or_404(StudentInfo, student_id=student_id)
     return render(request, "choose_gateway.html", {"student": student})
  
- 
-
 @method_decorator(csrf_exempt, name='dispatch')
 class OptionPaymentView(View):
- 
     def post(self, request):
         response_data = request.POST.dict()
-        print("Webhook POST Data:", response_data)
+        student_id = response_data.get("student_id")
+
+        if not student_id:
+            return render(request, "error_page.html", {"message": "Student ID not provided."})
 
         try:
-      
-            student_id = response_data.get("student_id")
-            if not student_id:
-                return render(request, "error_page.html", {"message": "Student ID not provided."})
+            student = StudentInfo.objects.get(student_id=student_id)
+        except StudentInfo.DoesNotExist:
+            return render(request, "error_page.html", {"message": "Student not found."})
 
-            
-            try:
-                student_id = int(student_id)
-            except ValueError:
-                return render(request, "error_page.html", {"message": "Invalid Student ID."})
-
-            
-            student = StudentInfo.objects.filter(student_id=student_id).first()
-            if not student:
-                return render(request, "error_page.html", {"message": "Student not found for this transaction."})
-
-            
-            txn_id = f"CLOUD{id(student)}{student_id}"
- 
-            if Payment.objects.filter(payu_transaction_id=txn_id).exists():
-                return render(request, "success_page.html", {"message": "Payment already recorded previously."})
-
-            Payment.objects.create(
-                student=student,
-                name=student.name.split()[0],
-                amount=1.00,  # Default amount for testing
-                payu_transaction_id=txn_id,
-                status="paid",
-            )
-
-            context = {
-                "student": student,
+        # Create payment with "processing" status
+        txn_id = f"CLOUD{id(student)}{student_id}"
+        payment, created = Payment.objects.get_or_create(
+            student=student,
+            payu_transaction_id=txn_id,
+            defaults={
+                "name": student.name.split()[0],
                 "amount": 1.00,
-                "transaction_id": txn_id
+                "status": "processing"
+            }
+        )
+
+        # Render a confirmation page to let user manually confirm
+        return render(request, "cloud_payment_confirmation.html", {"payment": payment})
+    
+@method_decorator(csrf_exempt, name='dispatch')
+class ConfirmCloudPaymentView(View):
+    def post(self, request, payment_id):
+        try:
+            payment = Payment.objects.get(id=payment_id)
+            
+            # Update status to "paid"
+            payment.status = "paid"
+            payment.save()
+
+            # Send email confirmation
+            context = {
+                "student": payment.student,
+                "amount": payment.amount,
+                "transaction_id": payment.payu_transaction_id
             }
             html_message = render_to_string("pay_success_email.html", context)
             email_msg = EmailMessage(
                 subject="Payment Successful ✅",
                 body=html_message,
-                from_email=None,   
-                to=[student.email],
+                from_email=None,
+                to=[payment.student.email]
             )
             email_msg.content_subtype = "html"
             email_msg.send()
 
-            return render(request, "success_page.html", {"message": "💳 Payment successful and saved in the database!"})
-
-        except Exception as e:
-            print("Error in OptionPaymentView:", e)
-            return render(request, "error_page.html", {"message": "An unexpected error occurred. Please try again later."})
+            return render(request, "success_page.html", {"message": "💳 Payment confirmed and saved!"})
+        except Payment.DoesNotExist:
+            return render(request, "error_page.html", {"message": "Payment record not found."})
+    

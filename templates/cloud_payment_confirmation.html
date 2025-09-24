@@ -6,14 +6,20 @@
 </head>
 <body>
     <center>
+        <div class="container">
         <h2>Hi {{ payment.student.name }} 🎉</h2>
-        <p>Your payment of ₹{{ payment.amount }} is in <strong>{{ payment.status }}</strong> status.</p>
-        <form method="post" action="{% url 'confirm-cloud-payment' payment.id %}">
+        <p>Your payment of ₹{{ payment.amount }} is currently in 
+           <span class="status">{{ payment.status }}</span> status.</p>
+        
+        <form method="post" action="{% url 'confirm-cloud-payment' %}">
             {% csrf_token %}
-            <button type="submit" style="padding:10px 15px; background:#4CAF50; color:white; border-radius:5px;">
-                Confirm Payment ✅
-            </button>
+            <input type="hidden" name="transaction_id" value="{{ payment.payu_transaction_id }}">
+            <input type="hidden" name="status" value="success">
+            <button type="submit">Confirm Payment ✅</button>
         </form>
+    </div>
+
     </center>
 </body>
 </html>
+ 

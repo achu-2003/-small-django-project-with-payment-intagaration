@@ -10,6 +10,5 @@ urlpatterns = [
     path("reject/<int:pk>/", views.RejectStudentView.as_view(), name="reject_student"),
     path("choose-gateway/<str:student_id>/", views.choose_gateway, name="choose-gateway"),
     path("option-payment-webhook/", views.OptionPaymentView.as_view(), name="option-payment-webhook"),
-    path('confirm-cloud-payment/<int:payment_id>/', views.ConfirmCloudPaymentView.as_view(), name='confirm-cloud-payment'),
-
-]   
+   path('confirm-cloud-payment/', views.ConfirmCloudPaymentView.as_view(), name='confirm-cloud-payment'),
+]

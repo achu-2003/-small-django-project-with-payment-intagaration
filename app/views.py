@@ -1,4 +1,5 @@
 import hashlib,time
+import json
 from django.http import HttpResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.views import View
@@ -311,8 +312,7 @@ class OptionPaymentView(View):
             student = StudentInfo.objects.get(student_id=student_id)
         except StudentInfo.DoesNotExist:
             return render(request, "error_page.html", {"message": "Student not found."})
-
-        # Create payment with "processing" status
+ 
         txn_id = f"CLOUD{id(student)}{student_id}"
         payment, created = Payment.objects.get_or_create(
             student=student,
@@ -323,21 +323,37 @@ class OptionPaymentView(View):
                 "status": "processing"
             }
         )
-
-        # Render a confirmation page to let user manually confirm
         return render(request, "cloud_payment_confirmation.html", {"payment": payment})
     
 @method_decorator(csrf_exempt, name='dispatch')
 class ConfirmCloudPaymentView(View):
-    def post(self, request, payment_id):
-        try:
-            payment = Payment.objects.get(id=payment_id)
-            
-            # Update status to "paid"
-            payment.status = "paid"
-            payment.save()
+    def post(self, request):
+        data = request.POST.dict()
+        print(data)
+        if not data:
+            try:
+                data = json.loads(request.body.decode())
+            except Exception:
+                data = {}
 
-            # Send email confirmation
+        txn_id = data.get("transaction_id")
+        status = data.get("status")   
+
+        if not txn_id or not status:
+            return render(request, "error_page.html", {"message": "Invalid webhook payload"})
+
+        try:
+            payment = Payment.objects.get(payu_transaction_id=txn_id)
+        except Payment.DoesNotExist:
+            return render(request, "error_page.html", {"message": "Payment record not found."})
+
+        if payment.status == "paid" and status == "success":
+            return render(request, "success_page.html", {"message": "Already paid"})
+
+        payment.status = "paid" if status == "success" else "failed"
+        payment.save()
+
+        if status == "success":
             context = {
                 "student": payment.student,
                 "amount": payment.amount,
@@ -347,13 +363,12 @@ class ConfirmCloudPaymentView(View):
             email_msg = EmailMessage(
                 subject="Payment Successful ✅",
                 body=html_message,
-                from_email=None,
+                from_email=settings.DEFAULT_FROM_EMAIL,
                 to=[payment.student.email]
             )
             email_msg.content_subtype = "html"
             email_msg.send()
-
             return render(request, "success_page.html", {"message": "💳 Payment confirmed and saved!"})
-        except Payment.DoesNotExist:
-            return render(request, "error_page.html", {"message": "Payment record not found."})
-    
+        else:
+            return render(request, "error_page.html", {"message": "Payment failed or cancelled."})
+

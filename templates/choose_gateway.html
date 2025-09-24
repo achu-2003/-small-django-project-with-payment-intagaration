@@ -5,22 +5,41 @@
     <title>Choose Payment Method</title>
 </head>
 <body>
-    <h2>Dear {{ student.name }}, 🎉</h2>
-    <p>Please choose your payment method:</p>
+    <center>
+        <h2>Dear {{ student.name }}, 🎉</h2>
+        <p>Please choose your payment method:</p>
 
-    <a href="{% url 'initiate-payment' student.student_id %}" 
-       style="display:inline-block;padding:10px 15px;background:#4CAF50;color:#fff;text-decoration:none;border-radius:5px;">
-       Pay with PayU 💳
-    </a>
+        {% if cloud_payment %}
+            <form method="post" action="{% url 'option-payment-webhook' %}" style="margin-top:20px;">
+                {% csrf_token %}
+                <input type="hidden" name="student_id" value="{{ student.student_id }}">
+                <button type="submit"
+                        style="display:inline-block;padding:10px 15px;background:#4c7faf;color:#fff;text-decoration:none;border-radius:5px;">
+                    Continue Cloud Payment 💳
+                </button>
+            </form>
 
+            <p style="color:red; font-weight:bold; margin-top:10px;">
+                PayU option is hidden until the Cloud payment is completed.
+            </p>
 
-    <form method="post" action="{% url 'option-payment-webhook' %}" style="margin-top:20px;">
-        {% csrf_token %}
-        <input type="hidden" name="student_id" value="{{ student.student_id }}">
-        <button name="status" value="success" 
-                 style="display:inline-block;padding:10px 15px;background:#4c7faf;color:#fff;text-decoration:none;border-radius:5px;">
-            Pay With Cloud 💳
-        </button>
-    </form>
+        {% else %}
+           
+            <a href="{% url 'initiate-payment' student.student_id %}" 
+               style="display:inline-block;padding:10px 15px;background:#4CAF50;color:#fff;text-decoration:none;border-radius:5px;margin-right:10px;">
+               Pay with PayU 💳
+            </a>
+
+          
+            <form method="post" action="{% url 'option-payment-webhook' %}" style="display:inline-block; margin-top:20px;">
+                {% csrf_token %}
+                <input type="hidden" name="student_id" value="{{ student.student_id }}">
+                <button type="submit"
+                        style="display:inline-block;padding:10px 15px;background:#4c7faf;color:#fff;text-decoration:none;border-radius:5px;">
+                    Pay With Cloud 💳
+                </button>
+            </form>
+        {% endif %}
+    </center>
 </body>
 </html>

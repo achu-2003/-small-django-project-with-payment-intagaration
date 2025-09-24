@@ -212,6 +212,10 @@ class StudentCreateView(CreateView):
 class ApproveStudentView(View):
     def get(self, request, pk):
         pending_student = get_object_or_404(PendingStudent, pk=pk)
+        if not pending_student:
+            return render(request, "error_page.html", {
+                "message": "❌ Student record not found or already approved/rejected."
+            })
         try:
             student = StudentInfo.objects.create(
                 student_id=pending_student.student_id,
@@ -295,9 +299,21 @@ def success_info(msg=None):
     else:
         return 'Something Wrong'    
     
+
 def choose_gateway(request, student_id):
     student = get_object_or_404(StudentInfo, student_id=student_id)
-    return render(request, "choose_gateway.html", {"student": student})
+
+    cloud_payment = Payment.objects.filter(
+        student=student,
+        payu_transaction_id__startswith='CLOUD',
+        status='processing'
+    ).first()
+
+    return render(request, "choose_gateway.html", {
+        "student": student,
+        "cloud_payment": cloud_payment
+    })
+
  
 @method_decorator(csrf_exempt, name='dispatch')
 class OptionPaymentView(View):
@@ -312,24 +328,43 @@ class OptionPaymentView(View):
             student = StudentInfo.objects.get(student_id=student_id)
         except StudentInfo.DoesNotExist:
             return render(request, "error_page.html", {"message": "Student not found."})
- 
-        txn_id = f"CLOUD{id(student)}{student_id}"
-        payment, created = Payment.objects.get_or_create(
+        
+        already_paid = Payment.objects.filter(
+                student=student,
+                status="paid"
+            ).exists()
+
+        if already_paid:
+            return render(request,"error_page.html",
+                {"message": render_errors("You have already completed the payment")})
+
+        cloud_payment = Payment.objects.filter(
             student=student,
-            payu_transaction_id=txn_id,
-            defaults={
-                "name": student.name.split()[0],
-                "amount": 1.00,
-                "status": "processing"
-            }
-        )
+            payu_transaction_id__startswith="CLOUD",
+            status="processing"
+        ).first()
+
+        if cloud_payment:
+            payment = cloud_payment
+        else:
+            txn_id = f"CLOUD{id(student)}{student_id}"
+            payment = Payment.objects.create(
+                student=student,
+                payu_transaction_id=txn_id,
+                name=student.name.split()[0],
+                amount=1.00,
+                status="processing"
+            )
+
         return render(request, "cloud_payment_confirmation.html", {"payment": payment})
+
     
 @method_decorator(csrf_exempt, name='dispatch')
 class ConfirmCloudPaymentView(View):
     def post(self, request):
         data = request.POST.dict()
         print(data)
+
         if not data:
             try:
                 data = json.loads(request.body.decode())

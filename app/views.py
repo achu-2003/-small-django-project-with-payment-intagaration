@@ -384,7 +384,7 @@ class ConfirmCloudPaymentView(View):
         except Payment.DoesNotExist:
             return render(request, "error_page.html", {"message": "Payment record not found."})
 
-        final_states = {"disbursed", "failed", "cancelled", "success", "paid"}
+        final_states = {"disbursed", "failed", "cancelled", "success"}
         if payment.status in final_states:
             return render(request, "success_page.html", {
                 "message": f"Payment already in final state: {payment.status}"

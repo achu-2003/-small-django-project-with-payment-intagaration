@@ -363,8 +363,6 @@ class OptionPaymentView(View):
 class ConfirmCloudPaymentView(View):
     def post(self, request):
         data = request.POST.dict()
-        print(data)
-
         if not data:
             try:
                 data = json.loads(request.body.decode())
@@ -377,22 +375,38 @@ class ConfirmCloudPaymentView(View):
         if not txn_id or not status:
             return render(request, "error_page.html", {"message": "Invalid webhook payload"})
 
+        allowed_statuses = {"processing", "disbursed", "success", "failed", "cancelled"}
+        if status not in allowed_statuses:
+            return render(request, "error_page.html", {"message": f"Unknown status '{status}'"})
+
         try:
             payment = Payment.objects.get(payu_transaction_id=txn_id)
         except Payment.DoesNotExist:
             return render(request, "error_page.html", {"message": "Payment record not found."})
 
-        if payment.status == "paid" and status == "success":
-            return render(request, "success_page.html", {"message": "Already paid"})
+        final_states = {"disbursed", "failed", "cancelled", "success", "paid"}
+        if payment.status in final_states:
+            return render(request, "success_page.html", {
+                "message": f"Payment already in final state: {payment.status}"
+            })
 
-        payment.status = "paid" if status == "success" else "failed"
+    
+        status_map = {
+            "processing": "processing",
+            "success": "paid",       
+            "disbursed": "disbursed",
+            "failed": "failed",
+            "cancelled": "cancelled"
+        }
+        payment.status = status_map.get(status, payment.status)
         payment.save()
 
-        if status == "success":
+        if status in ("success", "disbursed"):
             context = {
                 "student": payment.student,
                 "amount": payment.amount,
-                "transaction_id": payment.payu_transaction_id
+                "transaction_id": payment.payu_transaction_id,
+                "status": status
             }
             html_message = render_to_string("pay_success_email.html", context)
             email_msg = EmailMessage(
@@ -403,7 +417,12 @@ class ConfirmCloudPaymentView(View):
             )
             email_msg.content_subtype = "html"
             email_msg.send()
-            return render(request, "success_page.html", {"message": "💳 Payment confirmed and saved!"})
-        else:
-            return render(request, "error_page.html", {"message": "Payment failed or cancelled."})
+            return render(request, "success_page.html", {"message": f"💳 Payment {status}!"})
 
+        elif status == "processing":
+            return render(request, "success_page.html", {"message": "⏳ Payment is processing, please wait."})
+
+        elif status in ("failed", "cancelled"):
+            return render(request, "error_page.html", {"message": f"❌ Payment {status}."})
+
+        return render(request, "error_page.html", {"message": "Unhandled payment status."})

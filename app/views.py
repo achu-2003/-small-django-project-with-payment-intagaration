@@ -320,6 +320,7 @@ class OptionPaymentView(View):
     def post(self, request):
         response_data = request.POST.dict()
         student_id = response_data.get("student_id")
+        print(response_data)
 
         if not student_id:
             return render(request, "error_page.html", {"message": "Student ID not provided."})
@@ -363,12 +364,13 @@ class OptionPaymentView(View):
 class ConfirmCloudPaymentView(View):
     def post(self, request):
         data = request.POST.dict()
+  
         if not data:
             try:
                 data = json.loads(request.body.decode())
             except Exception:
                 data = {}
-
+        print(data)
         txn_id = data.get("transaction_id")
         status = data.get("status")   
 

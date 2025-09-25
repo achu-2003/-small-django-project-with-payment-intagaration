@@ -22,7 +22,7 @@
             <p style="color:red; font-weight:bold; margin-top:10px;">
                 PayU option is hidden until the Cloud payment is completed.
             </p>
-
+               
         {% else %}
            
             <a href="{% url 'initiate-payment' student.student_id %}" 
@@ -41,5 +41,6 @@
             </form>
         {% endif %}
         </center>
+
 </body>
 </html>

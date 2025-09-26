@@ -2,8 +2,6 @@ from django.contrib import admin
 from .models import StudentInfo,Payment,StaffInfo,PendingStudent
 from import_export.admin import ImportExportModelAdmin
 
-
-
 class StaffInfoAdmin(admin.ModelAdmin):
     list_display=['name','email','mobile']
 

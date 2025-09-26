@@ -1,19 +1,16 @@
-import hashlib,time
-import json
-from django.http import HttpResponse
-from django.shortcuts import render, get_object_or_404, redirect
+import hashlib,time,json
+from django.shortcuts import render, get_object_or_404
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.conf import settings
 from django.urls import reverse
 from django.core.exceptions import ValidationError
-from .models import StudentInfo, Payment,PendingStudent,StaffInfo
+from .models import StudentInfo, Payment,PendingStudent
 from .forms import StudentInfoForm
 from django.views.generic import CreateView
 from django.template.loader import render_to_string
 from django.core.mail import EmailMessage
-from django.core.mail import send_mail
 from django.db import IntegrityError
 
 def render_errors(msg=None):
@@ -21,13 +18,8 @@ def render_errors(msg=None):
         return msg
     return "An unexpected error occurred. Please try again later." 
 
-
-def render_success(request, msg):
-    return render(request, "success_page.html", {"message": msg})
-
-
 class InitiatePaymentView(View):
-
+    
     def get(self, request, student_id):
         try:
             try:
@@ -290,15 +282,11 @@ class RejectStudentView(View):
             })
         
         pending_student.delete()
-        return render_success(request, "❌ Student rejected, removed from PendingStudent, and email sent.")
- 
-    
-def success_info(msg=None):
-    if msg:
-        return msg
-    else:
-        return 'Something Wrong'    
-    
+        return render_success(request, "❌ Student rejected, removed from PendingStudent, and email sent.")   
+
+
+def render_success(request, msg):
+    return render(request, "success_page.html", {"message": msg})
 
 def choose_gateway(request, student_id):
     student = get_object_or_404(StudentInfo, student_id=student_id)

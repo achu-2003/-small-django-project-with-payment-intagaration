@@ -26,17 +26,26 @@
         {% else %}
            
             <a href="{% url 'initiate-payment' student.student_id %}" 
-               style="display:inline-block;padding:10px 15px;background:#4CAF50;color:#fff;text-decoration:none;border-radius:5px;margin-right:10px;">
+               style="display:inline-block;padding:10px 15px;background:#c144c5;color:#fff;text-decoration:none;border-radius:5px;margin-right:10px;">
                Pay with PayU 💳
             </a>
-
-          
+    
             <form method="post" action="{% url 'option-payment-webhook' %}" style="display:inline-block; margin-top:20px;">
                 {% csrf_token %}
                 <input type="hidden" name="student_id" value="{{ student.student_id }}">
                 <button type="submit"
                         style="display:inline-block;padding:10px 15px;background:#4c7faf;color:#fff;text-decoration:none;border-radius:5px;">
                     Pay With Cloud 💳
+                </button>
+            </form>
+               <br>
+            <form method="post" action=" " style="display:inline-block; margin-top:20px;">
+                {% csrf_token %}
+                <input type="hidden" name="student_id" value="{{ student.student_id }}">
+                <input type="hidden" name="environment" value="sandbox">  
+                <button type="submit"
+                        style="display:inline-block;padding:10px 15px;background:#1cc98f;color:#fff;text-decoration:none;border-radius:5px;">
+                    Pay With Propelld 💳
                 </button>
             </form>
         {% endif %}

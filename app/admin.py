@@ -14,7 +14,7 @@ class StudentInfoAdmin(ImportExportModelAdmin,admin.ModelAdmin):
     search_fields = ('student_id', 'name')
 
 class PaymentAdmin(ImportExportModelAdmin,admin.ModelAdmin):
-    list_display = ('get_student_id', 'name', 'amount', 'status','payu_transaction_id', 'created_at')
+    list_display = ('get_student_id', 'name', 'amount', 'status','payu_transaction_id', 'created_at',"propelld_quote_id","admin_action")
     list_filter = ('status', 'created_at') 
     search_fields = ('payu_transaction_id', 'student__student_id')
 

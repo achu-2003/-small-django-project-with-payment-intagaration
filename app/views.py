@@ -416,3 +416,19 @@ class ConfirmCloudPaymentView(View):
             return render(request, "error_page.html", {"message": f"❌ Payment {status}."})
 
         return render(request, "error_page.html", {"message": "Unhandled payment status."})
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

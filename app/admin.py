@@ -1,6 +1,8 @@
 from django.contrib import admin
 from .models import StudentInfo,Payment,StaffInfo,PendingStudent
 from import_export.admin import ImportExportModelAdmin
+from django.utils.html import format_html
+from django.urls import reverse
 
 class StaffInfoAdmin(admin.ModelAdmin):
     list_display=['name','email','mobile']
@@ -14,9 +16,21 @@ class StudentInfoAdmin(ImportExportModelAdmin,admin.ModelAdmin):
     search_fields = ('student_id', 'name')
 
 class PaymentAdmin(ImportExportModelAdmin,admin.ModelAdmin):
-    list_display = ('get_student_id', 'name', 'amount', 'status','payu_transaction_id', 'created_at',"propelld_quote_id","admin_action")
+    list_display = ('get_student_id', 'name', 'amount', 'status','payu_transaction_id','reject_button', 'created_at',"propelld_quote_id","admin_action")
     list_filter = ('status', 'created_at') 
     search_fields = ('payu_transaction_id', 'student__student_id')
+
+    def reject_button(self, obj):
+        if obj.status == "processing":
+            url = reverse("admin-reject-propelld", args=[obj.id])
+            return format_html(
+                '<a class="button" style="padding:3px 8px; background:red; color:white; border-radius:3px; text-decoration:none;" href="{}">Reject</a>',
+                url
+            )
+        return "-"
+    
+    reject_button.short_description = 'Action'
+    reject_button.allow_tags = True
 
     def get_student_id(self, obj):
         return obj.student.student_id

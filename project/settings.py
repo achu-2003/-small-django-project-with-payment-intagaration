@@ -144,13 +144,12 @@ DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 
 #propelled detals
-PROPELLD_CLIENT_ID ="UAXcFRcmtUEoeKNWuVSoyvWL8khXPTkZ724f8883-1686-5616-881f-f05d1572fc09"
-PROPELLD_CLIENT_SECRET="KULDDaQHcoJ6PRFsk40t19zwLhZHHoyQc99b6186-115d-55c1-9f49-99354e2b0f4d"
-PROPELLD_BASE_UR="https://staging.propelld.com/v1"
+PROPELLD_CLIENT_ID ="uAXcFRcmtUEoeKNWuVSoyvWl8khXPTkZ724f8883-1686-5616-881f-f05d1572fc09"
+PROPELLD_CLIENT_SECRET = "KULDDaQHcoJ6PRFsk4Ot19zwLhZHHoyQc99b6186-115d-55c1-9f49-99354e2b0f4d"
+PROPELLD_API_URL="https://staging.propelld.com/v1"
 
+SITE_URL = 'https://de8997bdab74.ngrok-free.app'
 
-
-SITE_URL = 'https://776b04e68c1f.ngrok-free.app'
 CSRF_TRUSTED_ORIGINS = [
-    "https://776b04e68c1f.ngrok-free.app",
+    "https://de8997bdab74.ngrok-free.app",
 ] 

@@ -1,6 +1,7 @@
 import hashlib,time,json
 from django.shortcuts import render, get_object_or_404,redirect
 from django.views import View
+from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.conf import settings
@@ -290,7 +291,7 @@ class RejectStudentView(View):
 
 def render_success(request, msg):
     return render(request, "success_page.html", {"message": msg})
-
+@never_cache
 def choose_gateway(request, student_id):
     student = get_object_or_404(StudentInfo, student_id=student_id)
 
@@ -502,50 +503,6 @@ class InitiatePropelldView(View):
             return render(request, "error_page.html", {"message": "Invalid JSON response"})
 
 
-
-
-
-
-@method_decorator(csrf_exempt, name='dispatch')
-class ApproveRejectPropelldView(View):
-    def post(self, request, payment_id):
-        approved = request.POST.get("approved") == "true"
-        payment = get_object_or_404(Payment, id=payment_id)
-
-        if not payment.propelld_quote_id:
-            return render(request, "error_page.html", {"message": "No quote associated with this payment."})
-
-        if payment.status != "processing":
-            return render(request, "error_page.html", {"message": "Only processing quotes can be approved/rejected."})
-
-        url = f"{settings.PROPELLD_BASE_URL}/quote/approve"
-        payload = {
-                    "QuoteId": payment.propelld_quote_id, 
-                   "Approved": approved
-                  }
-         
-        headers = {
-            "Content-Type": "application/json",
-            "client-id":settings.PROPELLD_CLIENT_ID,
-            "client-secret":settings.PROPELLD_CLIENT_SECRET        
-        }
-        print(payload)
-        try:
-            resp = requests.post(url, json=payload, headers=headers,) 
-        except Exception as e:
-            return render(request, "error_page.html", {"message": f"Error contacting Propelld: {e}"})
-
-        if resp.get("StatusUpdated"):
-            if approved:
-                payment.status = "approved"
-            else:
-                payment.status = "rejected"
-            payment.save()
-            return render_success(request, f"✅ Quote {payment.propelld_quote_id} updated successfully: {payment.status}")
-        else:
-            return render(request, "error_page.html", {"message": f"Propelld did not update the quote. Response: {resp}"})
-
-
     
 
 def admin_reject_propelld(request, payment_id):
@@ -555,16 +512,13 @@ def admin_reject_propelld(request, payment_id):
         messages.error(request, "No quote associated with this payment.")
         return redirect("/admin/app/payment/")   
 
-    if payment.status != "processing":
-        messages.error(request, "Only processing quotes can be rejected.")
-        return redirect("/admin/app/payment/")   
 
     url = f"{settings.PROPELLD_API_URL}/quote/approve"
     QuoteId=payment.propelld_quote_id
 
     data = {
         "QuoteId": str(QuoteId),
-        "Approved": False  
+        "Approved":  False  
     }
 
     headers = {
@@ -603,6 +557,80 @@ def admin_reject_propelld(request, payment_id):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class ApproveRejectPropelldView(View):
+    def post(self, request, payment_id):
+        try:
+            body = json.loads(request.body)
+            approved = body.get("approved") is True   
+        except Exception:
+            return render(request, "error_page.html", {"message": "Invalid JSON body"})
+
+        payment = get_object_or_404(Payment, id=payment_id)
+
+        if not payment.propelld_quote_id:
+            return render(request, "error_page.html", {"message": "No quote associated with this payment."})
+
+        if payment.status != "processing":
+            return render(request, "error_page.html", {"message": "Only processing quotes can be approved/rejected."})
+
+        url = f"{settings.PROPELLD_API_URL}/quote/approve"
+        payload = {
+            "QuoteId": payment.propelld_quote_id, 
+            "Approved": approved
+        }
+
+        headers = {
+            "Content-Type": "application/json",
+            "client-id": settings.PROPELLD_CLIENT_ID,
+            "client-secret": settings.PROPELLD_CLIENT_SECRET        
+        }
+        print(payload)
+        try:
+            resp = requests.post(url, json=payload, headers=headers)
+        except Exception as e:
+            return render(request, "error_page.html", {"message": f"Error contacting Propelld: {e}"})
+        print("Status Code:", resp.status_code)
+        print("Response Text:", resp.text)
+       
+        try:
+            resp_data = resp.json()
+           
+        except ValueError:
+            return render(request, "error_page.html", {"message": f"Invalid JSON response from Propelld: {resp.text}"})
+
+        if resp_data.get("StatusUpdated"):
+            payment.status = "approved" if approved else "rejected"
+            print(f"Quote {payment.propelld_quote_id} has been {payment.status}.")
+            payment.save()
+            return render_success(request, f"✅ Quote {payment.propelld_quote_id} updated successfully: {payment.status}")
+        else:
+            return render(request, "error_page.html", {"message": f"Propelld did not update the quote. Response: {resp_data}"})
 
 
 

@@ -21,13 +21,12 @@ class PaymentAdmin(ImportExportModelAdmin,admin.ModelAdmin):
     search_fields = ('payu_transaction_id', 'student__student_id')
 
     def reject_button(self, obj):
-        if obj.status == "processing":
+        if obj.status == "processing" and obj.propelld_quote_id:
             url = reverse("admin-reject-propelld", args=[obj.id])
             return format_html(
                 '<a class="button" style="padding:3px 8px; background:red; color:white; border-radius:3px; text-decoration:none;" href="{}">Reject</a>',
                 url
             )
-        
 
     def get_student_id(self, obj):
         return obj.student.student_id

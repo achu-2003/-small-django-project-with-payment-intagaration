@@ -1,51 +1,51 @@
 <!DOCTYPE html>
+{% load static %}
 <html>
 <head>
     <meta charset="UTF-8">
     <title>Choose Payment Method</title>
+    <link rel="stylesheet" href="{% static 'css/choose_gatway.css' %}">
 </head>
 <body>
-    <center>
+    <div class="container">
         <h2>Dear {{ student.name }}, 🎉</h2>
         <p>Please choose your payment method:</p>
 
         {% if cloud_payment %}
-            <form method="post" action="{% url 'option-payment-webhook' %}" style="margin-top:20px;">
+            <form method="post" action="{% url 'option-payment-webhook' %}">
                 {% csrf_token %}
                 <input type="hidden" name="student_id" value="{{ student.student_id }}">
-                <button type="submit"
-                        style="display:inline-block;padding:10px 15px;background:#4c7faf;color:#fff;text-decoration:none;border-radius:5px;">
+                <button type="submit" class="btn btn-cloud">
                     Continue Cloud Payment 💳
                 </button>
             </form>
 
-            <p style="color:red; font-weight:bold; margin-top:10px;">
-                PayU option is hidden until the Cloud payment is completed.
-            </p>
-               
+            <p class="note">PayU and Propelld options are hidden until the Cloud payment is completed.</p>
+
+        {% elif propelld_payment %}
+            <a href="{% url 'initiate-propelld' student.student_id %}" class="btn btn-propelld">
+                Continue Propelld Payment 🏦
+            </a>
+
+            <p class="note">PayU and Cloud options are hidden until the Propelld payment is completed.</p>
+
         {% else %}
-           
-            <a href="{% url 'initiate-payment' student.student_id %}" 
-               style="display:inline-block;padding:10px 15px;background:#c144c5;color:#fff;text-decoration:none;border-radius:5px;margin-right:10px;">
-               Pay with PayU 💳
+            <a href="{% url 'initiate-payment' student.student_id %}" class="btn btn-payu">
+                Pay with PayU 💳
             </a>
     
-            <form method="post" action="{% url 'option-payment-webhook' %}" style="display:inline-block; margin-top:20px;">
+            <form method="post" action="{% url 'option-payment-webhook' %}" style="display:inline;">
                 {% csrf_token %}
                 <input type="hidden" name="student_id" value="{{ student.student_id }}">
-                <button type="submit"
-                        style="display:inline-block;padding:10px 15px;background:#4c7faf;color:#fff;text-decoration:none;border-radius:5px;">
+                <button type="submit" class="btn btn-cloud">
                     Pay With Cloud 💳
                 </button>
             </form>
-               <br>
-            <a href="{% url 'initiate-propelld' student.student_id %}" 
-                style="display:inline-block; padding:10px 15px; background:#2196F3; color:#fff; text-decoration:none; border-radius:5px; margin-top:20px;">
+            
+            <a href="{% url 'initiate-propelld' student.student_id %}" class="btn btn-propelld">
                 Pay with Propelld 🏦
             </a>
-
         {% endif %}
-        </center>
-
+    </div>
 </body>
 </html>

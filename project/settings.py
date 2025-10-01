@@ -148,8 +148,8 @@ PROPELLD_CLIENT_ID ="uAXcFRcmtUEoeKNWuVSoyvWl8khXPTkZ724f8883-1686-5616-881f-f05
 PROPELLD_CLIENT_SECRET = "KULDDaQHcoJ6PRFsk4Ot19zwLhZHHoyQc99b6186-115d-55c1-9f49-99354e2b0f4d"
 PROPELLD_API_URL="https://staging.propelld.com/v1"
 
-SITE_URL = 'https://de8997bdab74.ngrok-free.app'
+SITE_URL = 'https://7b6bf4a77c75.ngrok-free.app'
 
 CSRF_TRUSTED_ORIGINS = [
-    "https://de8997bdab74.ngrok-free.app",
+    "https://7b6bf4a77c75.ngrok-free.app",
 ] 

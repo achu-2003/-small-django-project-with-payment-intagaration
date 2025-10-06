@@ -1,3 +1,8 @@
+from django.views.generic import CreateView
+from django.template.loader import render_to_string
+from django.core.mail import EmailMessage
+from django.db import IntegrityError
+from django.contrib import messages 
 import hashlib,time,json,requests 
 from django.shortcuts import render, get_object_or_404,redirect
 from django.views import View
@@ -9,12 +14,150 @@ from django.urls import reverse
 from django.core.exceptions import ValidationError
 from .models import StudentInfo, Payment,PendingStudent
 from .forms import StudentInfoForm
-from django.views.generic import CreateView
-from django.template.loader import render_to_string
-from django.core.mail import EmailMessage
-from django.db import IntegrityError
-from django.contrib import messages   
+  
 
+class StudentCreateView(CreateView):
+    model = PendingStudent
+    form_class = StudentInfoForm   
+    template_name = 'student_form.html'
+
+    def form_valid(self, form):
+        try:
+            pending_student = form.save(commit=False)
+            staff = form.cleaned_data["staff"] 
+
+            pending_student = PendingStudent.objects.create(
+            student_id=form.cleaned_data["student_id"],
+            name=form.cleaned_data["name"],
+            email=form.cleaned_data["email"],
+            phone=form.cleaned_data["phone"],   
+            staff =  staff
+            )
+        except ValidationError:
+            return render(self.request,"error_page.html",
+            {"message": render_errors("Invalid data provided. Please check your input.")}
+        )
+        except IntegrityError:
+            return render(self.request,"error_page.html",
+            {"message": render_errors("A student with this ID or email already exists.")}
+        )
+        except Exception:
+            return render(self.request,"error_page.html",
+            {"message": render_errors("An unexpected error occurred. Please try again later.")}
+        )   
+ 
+        self.send_approval_email(pending_student)
+
+        return render_success(self.request, "📩 Your request has been sent to staff for approval!")
+
+
+
+    def send_approval_email(self, pending_student):
+
+        approve_url = settings.SITE_URL + reverse("approve_student", args=[pending_student.id])
+        reject_url =  settings.SITE_URL + reverse("reject_student", args=[pending_student.id])
+
+        context = {
+            "student": pending_student,
+            "approve_url": approve_url,
+            "reject_url": reject_url
+        }
+
+        html_message = render_to_string("student_approval.html", context)
+        
+        email = EmailMessage(
+            subject="Approval Needed for New Student",
+            body=html_message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[pending_student.staff.email],
+        )
+        email.content_subtype = "html"
+        email.send()
+
+
+class ApproveStudentView(View):
+    def get(self, request, pk):
+        pending_student = get_object_or_404(PendingStudent, pk=pk)
+        if not pending_student:
+            return render(request, "error_page.html", {
+                "message": "❌ Student record not found or already approved/rejected."
+            })
+        try:
+            student = StudentInfo.objects.create(
+                student_id=pending_student.student_id,
+                name=pending_student.name,
+                email=pending_student.email,
+                phone=pending_student.phone,
+                staff=pending_student.staff
+            )
+
+            payment_url = request.build_absolute_uri(
+                reverse("choose-gateway", args=[student.student_id])
+            )
+
+            context = {
+                "student": student,
+                "payment_url": payment_url,
+            }
+
+            try:
+                
+                subject = "Your Registration is Approved 🎉"
+                html_message = render_to_string("student_approved.html", context)
+
+                email = EmailMessage(
+                    subject=subject,
+                    body=html_message,
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    to=[student.email],
+                )
+                email.content_subtype = "html"  
+                email.send()
+
+            except Exception as e:
+                return render(request, "error_page.html", {
+                    "message": render_errors(f"Email sending failed (approval): {e}")
+                })
+
+            pending_student.delete()
+            return render_success(request, "🎉 Student approved, added to StudentInfo, and payment email sent!")
+
+
+        except IntegrityError:
+            return render(request, "error_page.html", {
+                "message": render_errors("A student with this ID or email already exists.")
+            })
+
+
+
+class RejectStudentView(View):
+    def get(self, request, pk):
+        pending_student = get_object_or_404(PendingStudent, pk=pk)
+        try:
+            subject = "Your Registration Request was Rejected ❌"
+            
+            context = {
+                "student_name": pending_student.name,
+            }
+      
+            html_message = render_to_string("student_rejected.html", context)
+     
+            email = EmailMessage(
+                subject=subject,
+                body=html_message,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                to=[pending_student.email],
+            )
+            email.content_subtype = "html"  
+            email.send()
+
+        except Exception as e:
+            return render(request, "error_page.html", {
+                "message": render_errors(f"Rejection email could not be sent. Error: {str(e)}")
+            })
+        
+        pending_student.delete()
+        return render_success(request, "❌ Student rejected, removed from PendingStudent, and email sent.")   
 
 
 class InitiatePaymentView(View):
@@ -134,159 +277,19 @@ class PaymentSuccessView(View):
 class PaymentFailureView(View):
     def post(self, request):
         response_data = request.POST.dict()
-        print("Failure Response from PayU:", response_data)
+        # print("Failure Response from PayU:", response_data)
         error_message = response_data.get('error_Message', 'Unknown error occurred')
         return render(request,"error_page.html",
             {"message": render_errors(f"Payment Failed! Reason: {error_message}")}
         )
     
 
-class StudentCreateView(CreateView):
-    model = PendingStudent
-    form_class = StudentInfoForm   
-    template_name = 'student_form.html'
-
-    def form_valid(self, form):
-        try:
-            pending_student = form.save(commit=False)
-            staff = form.cleaned_data["staff"] 
-
-            pending_student = PendingStudent.objects.create(
-            student_id=form.cleaned_data["student_id"],
-            name=form.cleaned_data["name"],
-            email=form.cleaned_data["email"],
-            phone=form.cleaned_data["phone"],   
-            staff =  staff
-            )
-        except ValidationError:
-            return render(self.request,"error_page.html",
-            {"message": render_errors("Invalid data provided. Please check your input.")}
-        )
-        except IntegrityError:
-            return render(self.request,"error_page.html",
-            {"message": render_errors("A student with this ID or email already exists.")}
-        )
-        except Exception:
-            return render(self.request,"error_page.html",
-            {"message": render_errors("An unexpected error occurred. Please try again later.")}
-        )   
- 
-        self.send_approval_email(pending_student)
-
-        return render_success(self.request, "📩 Your request has been sent to staff for approval!")
-
-
-
-    def send_approval_email(self, pending_student):
-
-        approve_url = settings.SITE_URL + reverse("approve_student", args=[pending_student.id])
-        reject_url =  settings.SITE_URL + reverse("reject_student", args=[pending_student.id])
-
-        context = {
-            "student": pending_student,
-            "approve_url": approve_url,
-            "reject_url": reject_url
-        }
-
-        html_message = render_to_string("student_approval.html", context)
-        
-        email = EmailMessage(
-            subject="Approval Needed for New Student",
-            body=html_message,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            to=[pending_student.staff.email],
-        )
-        email.content_subtype = "html"
-        email.send()
-
-
-class ApproveStudentView(View):
-    def get(self, request, pk):
-        pending_student = get_object_or_404(PendingStudent, pk=pk)
-        if not pending_student:
-            return render(request, "error_page.html", {
-                "message": "❌ Student record not found or already approved/rejected."
-            })
-        try:
-            student = StudentInfo.objects.create(
-                student_id=pending_student.student_id,
-                name=pending_student.name,
-                email=pending_student.email,
-                phone=pending_student.phone,
-                staff=pending_student.staff
-            )
-
-            payment_url = request.build_absolute_uri(
-                reverse("choose-gateway", args=[student.student_id])
-            )
-
-            context = {
-                "student": student,
-                "payment_url": payment_url,
-            }
-
-            try:
-                
-                subject = "Your Registration is Approved 🎉"
-                html_message = render_to_string("student_approved.html", context)
-
-                email = EmailMessage(
-                    subject=subject,
-                    body=html_message,
-                    from_email=settings.DEFAULT_FROM_EMAIL,
-                    to=[student.email],
-                )
-                email.content_subtype = "html"  
-                email.send()
-
-            except Exception as e:
-                return render(request, "error_page.html", {
-                    "message": render_errors(f"Email sending failed (approval): {e}")
-                })
-
-            pending_student.delete()
-            return render_success(request, "🎉 Student approved, added to StudentInfo, and payment email sent!")
-
-
-        except IntegrityError:
-            return render(request, "error_page.html", {
-                "message": render_errors("A student with this ID or email already exists.")
-            })
 
 def render_errors(msg=None):
     if msg:
         return msg
     return "An unexpected error occurred. Please try again later." 
 
-
-class RejectStudentView(View):
-    def get(self, request, pk):
-        pending_student = get_object_or_404(PendingStudent, pk=pk)
-        try:
-            subject = "Your Registration Request was Rejected ❌"
-            
-            context = {
-                "student_name": pending_student.name,
-            }
-      
-            html_message = render_to_string("student_rejected.html", context)
-     
-            email = EmailMessage(
-                subject=subject,
-                body=html_message,
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                to=[pending_student.email],
-            )
-            email.content_subtype = "html"  
-            email.send()
-
-        except Exception as e:
-            return render(request, "error_page.html", {
-                "message": render_errors(f"Rejection email could not be sent. Error: {str(e)}")
-            })
-        
-        pending_student.delete()
-        return render_success(request, "❌ Student rejected, removed from PendingStudent, and email sent.")   
 
 
 def render_success(request, msg):
@@ -322,7 +325,7 @@ class OptionPaymentView(View):
     def post(self, request):
         response_data = request.POST.dict()
         student_id = response_data.get("student_id")
-        print(response_data)
+        # print(response_data)
 
         if not student_id:
             return render(request, "error_page.html", {"message": "Student ID not provided."})
@@ -439,12 +442,19 @@ class InitiatePropelldView(View):
     def get(self, request, student_id):
         student = get_object_or_404(StudentInfo, student_id=student_id)
 
-        payment = Payment.objects.create(
+        payment = Payment.objects.filter(
             student=student,
-            name=student.name.split()[0],
-            amount=51000,
-            status="processing",
-        )
+            status__in=["processing", "failed"]
+        ).order_by("-created_at").first()
+
+        
+        if not payment:
+            payment = Payment.objects.create(
+                student=student,
+                name=student.name.split()[0],
+                amount=51000,
+                status="processing",
+            )
 
         url = f"{settings.PROPELLD_API_URL}/product/apply/generic"
 
@@ -463,7 +473,7 @@ class InitiatePropelldView(View):
             "client-secret": settings.PROPELLD_CLIENT_SECRET
         }
 
-        print("Payload:", payload)
+        # print("Payload:", payload)
 
         try:
             resp = requests.post(url, json=payload, headers=headers)
@@ -538,7 +548,7 @@ def admin_reject_propelld(request, payment_id):
         messages.error(request, f"Error contacting Propelld: {e}")
         return redirect("/admin/app/payment/")
 
-    if resp_data.get("Code") == 0:
+    if resp_data.get("Code") == 2:
         payment.status = "rejected"
         payment.admin_action = "Rejected by admin"
         payment.save()
@@ -627,20 +637,5 @@ class ApproveRejectPropelldView(View):
             return render_success(request, f"✅ Quote {payment.propelld_quote_id} updated successfully: {payment.status}")
         else:
             return render(request, "error_page.html", {"message": f"Propelld did not update the quote. Response: {resp_data}"})
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
  

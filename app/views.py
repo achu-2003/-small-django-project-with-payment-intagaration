@@ -1,4 +1,4 @@
-import hashlib,time,json
+import hashlib,time,json,requests 
 from django.shortcuts import render, get_object_or_404,redirect
 from django.views import View
 from django.views.decorators.cache import never_cache
@@ -13,14 +13,9 @@ from django.views.generic import CreateView
 from django.template.loader import render_to_string
 from django.core.mail import EmailMessage
 from django.db import IntegrityError
-from django.contrib import messages
-import requests,base64
-from django.http import JsonResponse
+from django.contrib import messages   
 
-def render_errors(msg=None):
-    if msg:
-        return msg
-    return "An unexpected error occurred. Please try again later." 
+
 
 class InitiatePaymentView(View):
     
@@ -29,7 +24,7 @@ class InitiatePaymentView(View):
             try:
                 student = StudentInfo.objects.get(student_id=student_id)
             except StudentInfo.DoesNotExist:
-                return render(request,"error_page.html",
+                return render(request,"error_page.html", 
                     {"message": render_errors("Invalid student ID")})
             
             already_paid = Payment.objects.filter(
@@ -258,6 +253,11 @@ class ApproveStudentView(View):
                 "message": render_errors("A student with this ID or email already exists.")
             })
 
+def render_errors(msg=None):
+    if msg:
+        return msg
+    return "An unexpected error occurred. Please try again later." 
+
 
 class RejectStudentView(View):
     def get(self, request, pk):
@@ -291,6 +291,8 @@ class RejectStudentView(View):
 
 def render_success(request, msg):
     return render(request, "success_page.html", {"message": msg})
+
+
 @never_cache
 def choose_gateway(request, student_id):
     student = get_object_or_404(StudentInfo, student_id=student_id)
@@ -313,7 +315,7 @@ def choose_gateway(request, student_id):
         "propelld_payment": propelld_payment
     })
 
-
+ 
  
 @method_decorator(csrf_exempt, name='dispatch')
 class OptionPaymentView(View):
@@ -430,11 +432,6 @@ class ConfirmCloudPaymentView(View):
         return render(request, "error_page.html", {"message": "Unhandled payment status."})
 
 
- 
-
-
-
-
 
 
 @method_decorator(csrf_exempt, name="dispatch")
@@ -450,7 +447,7 @@ class InitiatePropelldView(View):
         )
 
         url = f"{settings.PROPELLD_API_URL}/product/apply/generic"
-        # redirect_url = request.build_absolute_uri(reverse("propelld-webhook"))
+
         payload = {
             "CourseId": 16427,
             "FirstName": student.name.split()[0],
@@ -458,7 +455,6 @@ class InitiatePropelldView(View):
             "Email": student.email,
             "Mobile": student.phone,
             "ReferenceNumber": str(payment.id),
-            # "RedirectUrl": redirect_url
         }
 
         headers = {
@@ -647,34 +643,4 @@ class ApproveRejectPropelldView(View):
 
 
 
-
-@method_decorator(csrf_exempt, name='dispatch')
-class PropelldWebhookView(View):
-    def post(self, request):
-        try:
-            data = json.loads(request.body.decode())
-        except Exception:
-            data = {}
-
-        quote_id = data.get("QuoteId")
-        status = data.get("Status")
-
-        if not quote_id or not status:
-            return render(request, "error_page.html", {"message": "Invalid webhook payload"})
-
-        try:
-            payment = Payment.objects.get(propelld_quote_id=quote_id)
-        except Payment.DoesNotExist:
-            return render(request, "error_page.html", {"message": "Quote not found"})
-
-        status_map = {
-            "processing": "processing",
-            "approved": "approved",
-            "rejected": "rejected",
-            "disbursed": "disbursed",
-            "failed": "failed",
-        }
-        payment.status = status_map.get(status.lower(), payment.status)
-        payment.save()
-
-        return render_success(request, f"Webhook received. Quote {quote_id} status updated: {payment.status}")    
+ 

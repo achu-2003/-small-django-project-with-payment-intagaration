@@ -39,7 +39,7 @@ class StudentCreateView(CreateView):
         )
         except IntegrityError:
             return render(self.request,"error_page.html",
-            {"message": render_errors("A student with this ID or email already exists.")}
+            {"message": render_errors("A student with this ID or email already exists.")} 
         )
         except Exception:
             return render(self.request,"error_page.html",
